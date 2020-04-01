@@ -12,6 +12,7 @@ namespace Azurre\Template;
  */
 class Engine
 {
+    /** @var string */
     protected $templatesPath;
 
     /** @var string */
@@ -28,6 +29,9 @@ class Engine
 
     /** @var array */
     protected $layoutData = [];
+
+    /** @var array */
+    protected $includeData = [];
 
     /**
      * Engine constructor.
@@ -62,27 +66,46 @@ class Engine
 
     /**
      * @param string $section
+     * @return bool
+     */
+    public function hasSection($section)
+    {
+        return isset($this->sections[$section]);
+    }
+
+    /**
+     * @param string $section
      * @return string
-     * @throws \Exception
      */
     public function getSection($section)
     {
-        if (!isset($this->sections[$section])) {
-            throw new Exception("Section {$section} not found");
-        }
-        return $this->sections[$section];
+        return $this->sections[$section] ?? null;
     }
 
     /**
      * @param string $template
+     * @param array $data
      * @return void
      * @throws Exception
      */
-    public function include($template)
+    public function include($template, $data = [])
+    {
+        $this->includeData = $data;
+        $this->includeTemplate($template);
+        $this->includeData = [];
+    }
+
+    /**
+     * @param string $template
+     * @throws Exception
+     */
+    protected function includeTemplate($template)
     {
         $path = $this->templatesPath . DIRECTORY_SEPARATOR . $template;
         if (is_file($path)) {
-            include($this->templatesPath . DIRECTORY_SEPARATOR . $template);
+            extract($this->includeData, EXTR_OVERWRITE);
+            include($path);
+            return;
         }
         throw new Exception("Can't find {$path}");
     }
@@ -125,7 +148,7 @@ class Engine
         $path = $this->templatesPath . DIRECTORY_SEPARATOR . $template;
         if (is_file($path)) {
             extract($this->data, EXTR_OVERWRITE);
-            include($this->templatesPath . DIRECTORY_SEPARATOR . $template);
+            include($path);
             return;
         }
         throw new Exception("Can't find {$path}");
@@ -137,13 +160,18 @@ class Engine
      */
     protected function renderLayout()
     {
-        $path = $this->templatesPath . DIRECTORY_SEPARATOR . $this->layoutTemplate;
-        if (is_file($path)) {
-            extract(array_merge($this->layoutData), EXTR_OVERWRITE);
-            include($path);
-            return ob_get_contents();
+        if ($this->layoutTemplate) {
+            $path = $this->templatesPath . DIRECTORY_SEPARATOR . $this->layoutTemplate;
+            if (is_file($path)) {
+                extract(array_merge($this->layoutData), EXTR_OVERWRITE);
+                include($path);
+                $this->layoutTemplate = null;
+                $this->layoutData = [];
+                return ob_get_contents();
+            }
+            throw new Exception("Can't find {$path}");
         }
-        throw new Exception("Can't find {$path}");
+        return ob_get_contents();
     }
 
     /**

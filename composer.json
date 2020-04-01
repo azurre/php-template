@@ -1,7 +1,7 @@
 {
     "name": "azurre/php-template",
     "description": "Simple native PHP template engine",
-    "version": "0.0.1",
+    "version": "0.0.2",
     "keywords": [
         "template",
         "view"

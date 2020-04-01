@@ -1,11 +1,12 @@
 <?php
 /** @var \Azurre\Template\Engine $this */
+/** @var string $username */
 ?>
-<?php $this->layout('templates/index.phtml', ['title' => 'User Profile']) ?>
+<?php $this->layout('index.phtml', ['title' => 'Test template']) ?>
 <?php $this->section('content') ?>
-<h1>User Profile</h1>
-<p>Hello, </p>
-<?php $this->include('templates/block.phtml') ?>
+<h1>Test template</h1>
+<p>Hello, <?= $username ?></p>
+<?php $this->include('module/block.phtml', ['test' => 'Variable to block']) ?>
 
 <?php $this->section('footer') ?>
 Footer
