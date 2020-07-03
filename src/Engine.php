@@ -13,7 +13,7 @@ namespace Azurre\Template;
 class Engine
 {
     /** @var string */
-    protected $templatesPath;
+    protected $baseTemplatesPath = './';
 
     /** @var string */
     protected $layoutTemplate;
@@ -36,11 +36,36 @@ class Engine
     /**
      * Engine constructor.
      *
-     * @param string $templatesPath
+     * @param string $baseTemplatesPath
      */
-    public function __construct($templatesPath)
+    public function __construct($baseTemplatesPath = null)
     {
-        $this->templatesPath = $templatesPath;
+        if ($baseTemplatesPath) {
+            $this->setBaseTemplatePath($baseTemplatesPath);
+        }
+    }
+
+    /**
+     * @param string|null $key
+     * @param mixed $defaultValue
+     * @return mixed
+     */
+    public function getData($key = null, $defaultValue = null)
+    {
+        if ($key === null) {
+            return $this->data;
+        }
+        return $this->data[$key] ?? $defaultValue;
+    }
+
+    /**
+     * @param string $baseTemplatesPath
+     * @return $this
+     */
+    public function setBaseTemplatePath($baseTemplatesPath)
+    {
+        $this->baseTemplatesPath = $baseTemplatesPath;
+        return $this;
     }
 
     /**
@@ -55,9 +80,7 @@ class Engine
         return $this;
     }
 
-    /**
-     * @param string $section
-     */
+    /** @param string $section */
     public function section($section)
     {
         $this->sectionEnd();
@@ -74,12 +97,19 @@ class Engine
     }
 
     /**
-     * @param string $section
+     * @param string|null $defaultTemplate
      * @return string
+     * @throws Exception
      */
-    public function getSection($section)
+    public function getSection($section, $defaultTemplate = null)
     {
-        return $this->sections[$section] ?? null;
+        if (!isset($this->sections[$section])) {
+            if ($defaultTemplate && is_file($defaultTemplate)) {
+                return $this->fetch($defaultTemplate);
+            }
+            return '';
+        }
+        return $this->sections[$section];
     }
 
     /**
@@ -128,11 +158,31 @@ class Engine
     }
 
     /**
+     * @param string $template
+     * @return string|false
+     * @throws Exception
+     */
+    public function fetch($template)
+    {
+        return $this->render($template);
+    }
+
+    /**
      * @param string $key
      * @param mixed $value
      * @return $this
      */
     public function set($key, $value)
+    {
+        return $this->assign($key, $value);
+    }
+
+    /**
+     * @param string $key
+     * @param mixed $value
+     * @return $this
+     */
+    public function assign($key, $value)
     {
         $this->data[$key] = $value;
         return $this;
@@ -145,10 +195,10 @@ class Engine
      */
     protected function renderTemplate($template)
     {
-        $path = $this->templatesPath . DIRECTORY_SEPARATOR . $template;
+        $path = $this->baseTemplatesPath . DIRECTORY_SEPARATOR . $template;
         if (is_file($path)) {
             extract($this->data, EXTR_OVERWRITE);
-            include($path);
+            include($this->baseTemplatesPath . DIRECTORY_SEPARATOR . $template);
             return;
         }
         throw new Exception("Can't find {$path}");
@@ -161,7 +211,7 @@ class Engine
     protected function renderLayout()
     {
         if ($this->layoutTemplate) {
-            $path = $this->templatesPath . DIRECTORY_SEPARATOR . $this->layoutTemplate;
+            $path = $this->baseTemplatesPath . DIRECTORY_SEPARATOR . $this->layoutTemplate;
             if (is_file($path)) {
                 extract(array_merge($this->layoutData), EXTR_OVERWRITE);
                 include($path);
@@ -174,9 +224,7 @@ class Engine
         return ob_get_contents();
     }
 
-    /**
-     * @return void
-     */
+    /** @return void */
     protected function sectionEnd()
     {
         if ($this->currentSection !== null) {
